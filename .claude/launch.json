@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "profit-pulse-static",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "public", "-l", "4200", "--no-clipboard"],
+      "port": 4200
+    }
+  ]
+}

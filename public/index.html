@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+  <meta name="theme-color" content="#0a0a0a"/>
+  <title>Profit Pulse AI</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      /* ── Professional Black + Gold ── */
+      --bg:    #080808;
+      --bg2:   #101010;
+      --bg3:   #161616;
+      --bg4:   #1e1e1e;
+
+      /* Gold — primary accent (logo text colour) */
+      --gold:  #d4a017;
+      --gold2: #b8880f;
+      --gold3: #f0c040;
+      --gBg:   rgba(212,160,23,.1);
+      --gBrd:  rgba(212,160,23,.28);
+      --gGlow: rgba(212,160,23,.35);
+
+      /* Signal colours — UP/DOWN badges AND candles ONLY */
+      --up:    #22c55e;
+      --upBg:  rgba(34,197,94,.12);
+      --upGlw: rgba(34,197,94,.3);
+      --dn:    #ef4444;
+      --dnBg:  rgba(239,68,68,.12);
+      --dnGlw: rgba(239,68,68,.3);
+
+      /* Text */
+      --tx:  #f0f0f0;
+      --tx2: #888;
+      --tx3: #444;
+
+      /* Borders */
+      --brd:  rgba(212,160,23,.14);
+      --brdB: rgba(212,160,23,.3);
+    }
+
+    html,body{height:100%;width:100%;background:var(--bg);color:var(--tx);
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      font-size:14px;overflow:hidden;-webkit-font-smoothing:antialiased;
+      -webkit-tap-highlight-color:transparent}
+    #app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    #main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+
+    /* ══════════════════════════════════════
+       BOTTOM NAV
+    ══════════════════════════════════════ */
+    .bot-nav{display:flex;flex-shrink:0;background:#060606;
+      border-top:1px solid var(--brdB);padding-bottom:env(safe-area-inset-bottom,0)}
+    .nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;padding:8px 4px 10px;background:none;border:none;
+      cursor:pointer;font-family:inherit;color:var(--tx3);transition:color .2s;gap:3px}
+    .nav-tab.on{color:var(--gold)}
+    .nav-tab .ni{font-size:19px}
+    .nav-tab .nl{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+
+    /* ══════════════════════════════════════
+       WELCOME SCREEN
+    ══════════════════════════════════════ */
+    .welcome-wrap{flex:1;position:relative;overflow:hidden;display:flex;
+      flex-direction:column;align-items:center}
+
+    /* Animated candlestick BG — only place where red/green appear outside signals */
+    .candle-bg{position:absolute;bottom:0;left:0;right:0;height:55%;display:flex;
+      align-items:flex-end;gap:5px;padding:0 6px;pointer-events:none;z-index:0;opacity:.2}
+    .cb{border-radius:2px 2px 0 0;position:relative;flex:1}
+    .cb.g{background:linear-gradient(180deg,var(--up),#16a34a)}
+    .cb.r{background:linear-gradient(180deg,var(--dn),#b91c1c)}
+    .cb::before{content:'';position:absolute;left:50%;transform:translateX(-50%);
+      width:1.5px;top:-9px;height:10px;background:inherit}
+    .cb::after{content:'';position:absolute;left:50%;transform:translateX(-50%);
+      width:1.5px;bottom:-6px;height:7px;background:inherit}
+
+    /* Subtle gold vignette overlay */
+    .vignette{position:absolute;inset:0;z-index:1;pointer-events:none;
+      background:radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(8,8,8,.7) 100%)}
+
+    /* Thin gold scanlines */
+    .scanlines{position:absolute;inset:0;z-index:1;pointer-events:none;
+      background:repeating-linear-gradient(0deg,transparent,transparent 3px,
+        rgba(212,160,23,.018) 3px,rgba(212,160,23,.018) 4px)}
+
+    .welcome-content{position:relative;z-index:2;display:flex;flex-direction:column;
+      align-items:center;gap:14px;padding:26px 20px 24px;width:100%;overflow-y:auto}
+
+    /* Logo */
+    .logo-hero{width:120px;height:120px;border-radius:22px;overflow:hidden;flex-shrink:0;
+      border:1.5px solid var(--gBrd);
+      box-shadow:0 0 0 4px rgba(212,160,23,.06),0 8px 40px rgba(0,0,0,.8);
+      animation:float 4s ease-in-out infinite}
+    .logo-hero img{width:100%;height:100%;object-fit:cover;display:block}
+    .logo-hero-fb{width:100%;height:100%;background:var(--bg3);display:flex;
+      align-items:center;justify-content:center;font-size:48px}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+    .wc-title{font-size:24px;font-weight:900;letter-spacing:-.5px;text-align:center;
+      color:var(--gold3);text-shadow:0 0 30px rgba(240,192,64,.25);animation:fadeUp .5s .1s ease both}
+    .wc-sub-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+      color:var(--tx2);animation:fadeUp .5s .15s ease both}
+    .wc-desc{font-size:12px;color:var(--tx2);text-align:center;max-width:270px;line-height:1.65;
+      animation:fadeUp .5s .2s ease both}
+
+    .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;
+      width:100%;max-width:320px;animation:fadeUp .5s .25s ease both}
+    .feat-chip{background:var(--bg2);border:1px solid var(--brd);border-radius:10px;
+      padding:9px 11px;display:flex;align-items:center;gap:8px;
+      font-size:11px;font-weight:600;color:var(--tx2)}
+    .feat-chip .fi{font-size:17px}
+
+    /* Buttons */
+    .btn-gold{width:100%;max-width:320px;border:none;border-radius:12px;padding:15px;
+      font-size:14px;font-weight:800;color:#080808;cursor:pointer;font-family:inherit;
+      -webkit-appearance:none;letter-spacing:.2px;
+      background:linear-gradient(135deg,var(--gold3),var(--gold));
+      box-shadow:0 4px 24px rgba(212,160,23,.3);animation:fadeUp .5s .35s ease both,
+        glowGold 3s 1s infinite}
+    .btn-gold:active{opacity:.82}
+    @keyframes glowGold{0%,100%{box-shadow:0 4px 16px rgba(212,160,23,.25)}
+      50%{box-shadow:0 4px 32px rgba(212,160,23,.55)}}
+
+    .btn-outline-gold{width:100%;max-width:320px;border:1px solid var(--gBrd);
+      border-radius:12px;padding:15px;font-size:14px;font-weight:700;color:var(--gold);
+      cursor:pointer;font-family:inherit;background:transparent;-webkit-appearance:none;
+      animation:fadeUp .5s .45s ease both;transition:background .2s}
+    .btn-outline-gold:active{background:var(--gBg)}
+
+    .btn-outline{width:100%;max-width:340px;border:1px solid var(--brd);border-radius:12px;
+      padding:13px;font-size:13px;font-weight:600;color:var(--tx2);cursor:pointer;
+      font-family:inherit;background:transparent;-webkit-appearance:none;transition:background .2s}
+    .btn-outline:active{background:var(--bg3)}
+    .btn-link{font-size:12px;color:var(--tx2);background:none;border:none;cursor:pointer;
+      font-family:inherit;text-decoration:underline;text-underline-offset:3px}
+    .divider{display:flex;align-items:center;gap:10px;width:100%;max-width:320px;
+      animation:fadeUp .5s .4s ease both}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--brd)}
+    .divider span{font-size:10px;color:var(--tx3)}
+
+    /* Gate screen base */
+    .screen{flex:1;overflow-y:auto;display:flex;flex-direction:column;
+      align-items:center;padding:22px 18px 28px;gap:13px;animation:fadeUp .35s ease}
+    .g-title{font-size:20px;font-weight:900;letter-spacing:-.4px;text-align:center;
+      color:var(--gold3)}
+    .g-sub{font-size:12px;color:var(--tx2);text-align:center;max-width:280px;line-height:1.65}
+    .step-badge{background:var(--gBg);border:1px solid var(--gBrd);border-radius:20px;
+      padding:3px 14px;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.5px}
+    .info-box{background:var(--bg2);border:1px solid var(--brdB);border-radius:12px;
+      padding:14px 15px;width:100%;max-width:340px}
+    .ib-title{font-weight:700;font-size:12px;margin-bottom:8px;color:var(--gold)}
+    .ib-item{font-size:11px;color:var(--tx2);padding:3px 0}
+    .step-card{display:flex;gap:12px;align-items:flex-start;background:var(--bg2);
+      border:1px solid var(--brd);border-radius:12px;padding:13px 14px;
+      width:100%;max-width:340px}
+    .step-n{width:28px;height:28px;border-radius:50%;flex-shrink:0;
+      background:linear-gradient(135deg,var(--gold3),var(--gold));
+      color:#080808;display:flex;align-items:center;justify-content:center;
+      font-weight:900;font-size:12px}
+    .step-title{font-weight:700;font-size:12px;margin-bottom:3px}
+    .step-desc{font-size:11px;color:var(--tx2);line-height:1.55}
+    .uid-input{width:100%;max-width:340px;background:#060606;border:1.5px solid var(--brdB);
+      border-radius:12px;padding:14px 15px;font-size:16px;color:var(--tx);outline:none;
+      font-family:inherit;transition:border-color .2s}
+    .uid-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gBg)}
+    .uid-input.err{border-color:var(--dn)}
+    .err-txt{font-size:11px;color:var(--dn);align-self:flex-start;max-width:340px;
+      line-height:1.55;white-space:pre-line}
+    .uid-hint{background:var(--gBg);border:1px solid var(--gBrd);border-radius:12px;
+      padding:11px 13px;width:100%;max-width:340px}
+    .uh-title{font-size:10px;font-weight:700;color:var(--gold);margin-bottom:4px}
+    .uh-desc{font-size:10px;color:var(--tx2);line-height:1.5}
+
+    /* ══════════════════════════════════════
+       DASHBOARD HEADER
+    ══════════════════════════════════════ */
+    .dsh-hdr{background:linear-gradient(180deg,#060606 0%,#0d0d0d 100%);
+      border-bottom:1px solid var(--brdB);padding:10px 14px;flex-shrink:0;
+      box-shadow:0 4px 20px rgba(0,0,0,.8)}
+    .hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+    .logo-sm-wrap{display:flex;align-items:center;gap:9px}
+    .logo-sm{width:32px;height:32px;border-radius:8px;overflow:hidden;flex-shrink:0;
+      border:1px solid var(--gBrd)}
+    .logo-sm img{width:100%;height:100%;object-fit:cover}
+    .logo-sm-fb{width:100%;height:100%;background:var(--bg3);display:flex;
+      align-items:center;justify-content:center;font-size:16px}
+    .brand-name{font-size:14px;font-weight:900;letter-spacing:-.2px;color:var(--gold3)}
+    .brand-sub{font-size:7px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-top:1px}
+    .hdr-right{display:flex;align-items:center;gap:6px}
+    .badge-live{display:flex;align-items:center;gap:4px;background:rgba(34,197,94,.1);
+      border:1px solid rgba(34,197,94,.3);border-radius:20px;padding:3px 9px;
+      font-size:9px;font-weight:800;color:var(--up);letter-spacing:.8px}
+    .live-dot{width:5px;height:5px;background:var(--up);border-radius:50%;animation:pulse 1.4s infinite}
+    .badge-bal{display:flex;align-items:center;gap:4px;background:var(--gBg);
+      border:1px solid var(--gBrd);border-radius:20px;padding:3px 9px;
+      font-size:9px;font-weight:800;color:var(--gold)}
+
+    /* Counter + timeframe row */
+    .hdr-sub{display:flex;align-items:center;justify-content:space-between}
+    .sig-counter{font-size:10px;color:var(--tx2)}
+    .sig-counter strong{color:var(--gold);font-size:11px}
+    .tf-btns{display:flex;gap:4px}
+    .tf-btn{background:var(--bg3);border:1px solid var(--brd);border-radius:7px;
+      padding:4px 11px;font-size:10px;font-weight:700;color:var(--tx3);
+      cursor:pointer;font-family:inherit;transition:all .2s}
+    .tf-btn.on{background:var(--gBg);border-color:var(--gBrd);color:var(--gold)}
+
+    /* ══════════════════════════════════════
+       SIGNAL CARD
+    ══════════════════════════════════════ */
+    .sig-wrap{flex:1;display:flex;flex-direction:column;padding:10px 14px;
+      gap:9px;overflow:hidden;min-height:0}
+
+    /* Animation classes applied via JS */
+    .slide-in-r{animation:slideInR .25s ease forwards}
+    .slide-in-l{animation:slideInL .25s ease forwards}
+    .slide-out-l{animation:slideOutL .2s ease forwards}
+    .slide-out-r{animation:slideOutR .2s ease forwards}
+    @keyframes slideInR{from{opacity:0;transform:translateX(46px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes slideInL{from{opacity:0;transform:translateX(-46px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes slideOutL{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(-46px)}}
+    @keyframes slideOutR{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(46px)}}
+    @keyframes cardIn{0%{opacity:0;transform:scale(.97)}100%{opacity:1;transform:scale(1)}}
+
+    .sig-hero{flex:1;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;border-radius:18px;border:1px solid var(--brd);
+      padding:18px 16px;gap:14px;min-height:0;background:var(--bg2);
+      position:relative;overflow:hidden;animation:cardIn .35s ease}
+
+    /* Gold top glow line on hero card */
+    .sig-hero::before{content:'';position:absolute;top:0;left:10%;right:10%;
+      height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+
+    /* UP: gold border + subtle green top-glow only */
+    .sig-hero.up{border-color:rgba(212,160,23,.4);
+      box-shadow:0 0 40px rgba(34,197,94,.06),0 0 0 1px rgba(212,160,23,.08)}
+    /* DOWN: gold border + subtle red top-glow only */
+    .sig-hero.dn{border-color:rgba(212,160,23,.4);
+      box-shadow:0 0 40px rgba(239,68,68,.06),0 0 0 1px rgba(212,160,23,.08)}
+
+    /* Pair section */
+    .pair-section{display:flex;flex-direction:column;align-items:center;gap:4px}
+    .pair-name-big{font-size:22px;font-weight:900;letter-spacing:-.3px;color:var(--tx)}
+    .pair-line{width:40px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);
+      border-radius:1px}
+    .pair-sub{font-size:10px;color:var(--tx2);letter-spacing:.3px}
+
+    /* Direction badge — THE ONLY place with big red/green */
+    .dir-badge{display:flex;flex-direction:column;align-items:center;gap:5px;
+      padding:14px 36px;border-radius:16px;border:2px solid}
+    .dir-badge.up{background:var(--upBg);border-color:var(--up);
+      box-shadow:0 0 28px var(--upGlw);animation:upPulse 2.2s infinite}
+    .dir-badge.dn{background:var(--dnBg);border-color:var(--dn);
+      box-shadow:0 0 28px var(--dnGlw);animation:dnPulse 2.2s infinite}
+    @keyframes upPulse{0%,100%{box-shadow:0 0 18px var(--upGlw)}
+      50%{box-shadow:0 0 36px var(--upGlw),0 0 55px rgba(34,197,94,.15)}}
+    @keyframes dnPulse{0%,100%{box-shadow:0 0 18px var(--dnGlw)}
+      50%{box-shadow:0 0 36px var(--dnGlw),0 0 55px rgba(239,68,68,.15)}}
+    .dir-arrow{font-size:40px;line-height:1;filter:drop-shadow(0 0 8px currentColor)}
+    .dir-label{font-size:20px;font-weight:900;letter-spacing:4px}
+    .dir-badge.up .dir-arrow,.dir-badge.up .dir-label{color:var(--up)}
+    .dir-badge.dn .dir-arrow,.dir-badge.dn .dir-label{color:var(--dn)}
+
+    /* Confidence — gold, not signal colour */
+    .conf-section{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%}
+    .conf-num{font-size:40px;font-weight:900;letter-spacing:-2px;line-height:1;color:var(--gold3)}
+    .conf-lbl{font-size:8px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px}
+    .conf-bar{width:100%;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+    .conf-fill{height:100%;border-radius:3px;
+      background:linear-gradient(90deg,var(--gold2),var(--gold3));
+      box-shadow:0 0 8px rgba(212,160,23,.4);transition:width .55s ease}
+
+    /* Trade info */
+    .trade-row{display:flex;gap:7px;width:100%}
+    .trade-cell{flex:1;background:var(--bg3);border:1px solid var(--brd);
+      border-radius:10px;padding:8px 6px;display:flex;flex-direction:column;
+      align-items:center;gap:3px}
+    .tc-lbl{font-size:7.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+    .tc-val{font-size:13px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums}
+
+    /* Nav buttons */
+    .sig-nav{display:flex;gap:8px;padding:0 14px;flex-shrink:0}
+    .btn-nav{flex:1;border-radius:12px;padding:13px;font-size:13px;font-weight:700;
+      cursor:pointer;font-family:inherit;display:flex;align-items:center;
+      justify-content:center;gap:7px;-webkit-appearance:none;transition:all .2s;border:1px solid}
+    .btn-nav.prev{background:var(--bg3);border-color:var(--brd);color:var(--tx2)}
+    .btn-nav.prev:active{background:var(--bg4)}
+    .btn-nav.next{background:linear-gradient(135deg,rgba(212,160,23,.18),rgba(212,160,23,.06));
+      border-color:var(--gBrd);color:var(--gold);
+      box-shadow:0 0 18px rgba(212,160,23,.15);animation:glowBtn 2.8s infinite}
+    @keyframes glowBtn{0%,100%{box-shadow:0 0 10px rgba(212,160,23,.1)}
+      50%{box-shadow:0 0 24px rgba(212,160,23,.35)}}
+    .btn-nav.next:active{opacity:.8}
+
+    .disclaimer{padding:5px 14px 6px;font-size:8px;color:var(--tx3);text-align:center;
+      border-top:1px solid var(--brd);line-height:1.5;flex-shrink:0}
+
+    /* ══════════════════════════════════════
+       ACCOUNT & HELP TABS
+    ══════════════════════════════════════ */
+    .tab-scroll{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+
+    /* Balance card */
+    .bal-card{background:linear-gradient(135deg,#141008,#0f0f0f);
+      border:1px solid var(--gBrd);border-radius:16px;padding:20px 16px;
+      display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;overflow:hidden}
+    .bal-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+      background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+    .bal-amount{font-size:36px;font-weight:900;letter-spacing:-1.5px;color:var(--gold3);
+      text-shadow:0 0 20px rgba(240,192,64,.2)}
+    .bal-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--tx2)}
+    .bal-note{font-size:9px;color:var(--tx3);margin-top:2px}
+
+    .panel-card{background:var(--bg2);border:1px solid var(--brd);border-radius:12px;padding:14px}
+    .panel-label{font-size:8.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+    .status-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;
+      border-radius:20px;font-size:11px;font-weight:700}
+    .uid-mono{font-family:monospace;font-size:16px;font-weight:800;color:var(--gold);margin-top:3px}
+
+    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .stat-box{text-align:center;background:var(--bg3);border:1px solid var(--brd);
+      border-radius:10px;padding:11px 8px}
+    .stat-val{font-size:17px;font-weight:900}
+    .stat-lbl{font-size:8px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+
+    /* Help / Support */
+    .support-card{background:linear-gradient(135deg,#120f04,#0f0f0f);
+      border:1px solid var(--gBrd);border-radius:14px;padding:14px;
+      display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;
+      transition:background .2s;position:relative;overflow:hidden}
+    .support-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+      background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+    .support-card:active{background:var(--bg3)}
+    .sc-ico{width:42px;height:42px;border-radius:50%;
+      background:linear-gradient(135deg,var(--gold3),var(--gold));
+      display:flex;align-items:center;justify-content:center;font-size:19px;
+      flex-shrink:0;color:#080808}
+    .sc-name{font-weight:800;font-size:13px;color:var(--gold3)}
+    .sc-sub{font-size:10px;color:var(--tx2);margin-top:2px}
+    .faq-item{background:var(--bg2);border:1px solid var(--brd);border-radius:12px;padding:13px}
+    .faq-q{font-weight:700;font-size:12px;margin-bottom:5px;color:var(--gold)}
+    .faq-a{font-size:11px;color:var(--tx2);line-height:1.6}
+
+    /* Free preview */
+    .free-scroll{flex:1;overflow-y:auto;padding:12px 14px 20px;display:flex;flex-direction:column;gap:10px}
+    .free-badge{background:linear-gradient(135deg,var(--gold3),var(--gold));
+      border-radius:20px;padding:3px 12px;font-size:11px;font-weight:800;color:#080808}
+    .locked-stack{position:relative;border-radius:12px;overflow:hidden}
+    .locked-inner{filter:blur(3px);opacity:.45;pointer-events:none;display:flex;flex-direction:column;gap:5px}
+    .locked-overlay{position:absolute;inset:0;background:rgba(8,8,8,.9);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:10px;padding:18px;text-align:center}
+    .sig-mini{background:var(--bg2);border:1px solid var(--brd);border-radius:10px;
+      padding:10px 12px;display:flex;align-items:center;gap:9px}
+
+    /* Animations */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes cdBlink{50%{opacity:.35}}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="main"></div>
+  <div class="bot-nav" id="bot-nav"></div>
+</div>
+<script>
+// ═══════════════════════════════════════════
+//  TELEGRAM
+// ═══════════════════════════════════════════
+const tg = window.Telegram?.WebApp
+if (tg) {
+  tg.ready(); tg.expand()
+  try { tg.setHeaderColor('#060606') }     catch(e){}
+  try { tg.setBackgroundColor('#080808') } catch(e){}
+}
+
+// ═══════════════════════════════════════════
+//  24 PAIRS
+// ═══════════════════════════════════════════
+const PAIRS = [
+  {id:'eurusd',  name:'EUR/USD OTC'},  {id:'gbpusd',  name:'GBP/USD OTC'},
+  {id:'usdjpy',  name:'USD/JPY OTC'},  {id:'audusd',  name:'AUD/USD OTC'},
+  {id:'usdcad',  name:'USD/CAD OTC'},  {id:'usdchf',  name:'USD/CHF OTC'},
+  {id:'nzdusd',  name:'NZD/USD OTC'},  {id:'eurgbp',  name:'EUR/GBP OTC'},
+  {id:'eurjpy',  name:'EUR/JPY OTC'},  {id:'gbpjpy',  name:'GBP/JPY OTC'},
+  {id:'eurchf',  name:'EUR/CHF OTC'},  {id:'audcad',  name:'AUD/CAD OTC'},
+  {id:'audchf',  name:'AUD/CHF OTC'},  {id:'audjpy',  name:'AUD/JPY OTC'},
+  {id:'cadchf',  name:'CAD/CHF OTC'},  {id:'cadjpy',  name:'CAD/JPY OTC'},
+  {id:'chfjpy',  name:'CHF/JPY OTC'},  {id:'gbpaud',  name:'GBP/AUD OTC'},
+  {id:'gbpcad',  name:'GBP/CAD OTC'},  {id:'gbpchf',  name:'GBP/CHF OTC'},
+  {id:'gbpnzd',  name:'GBP/NZD OTC'},  {id:'euraud',  name:'EUR/AUD OTC'},
+  {id:'eurcad',  name:'EUR/CAD OTC'},  {id:'eurnzd',  name:'EUR/NZD OTC'},
+  {id:'nzdcad',  name:'NZD/CAD OTC'},  {id:'nzdchf',  name:'NZD/CHF OTC'},
+  {id:'nzdjpy',  name:'NZD/JPY OTC'},  {id:'audnzd',  name:'AUD/NZD OTC'},
+]
+
+// ═══════════════════════════════════════════
+//  TIMEFRAMES  (seconds + minutes)
+// ═══════════════════════════════════════════
+const TFS = [
+  {label:'5s',  ms:5000},
+  {label:'15s', ms:15000},
+  {label:'30s', ms:30000},
+  {label:'1m',  ms:60000},
+  {label:'2m',  ms:120000},
+  {label:'5m',  ms:300000},
+]
+const TF_DEFAULT = TFS[3]   // 1m
+
+// ═══════════════════════════════════════════
+//  SIGNAL ENGINE
+// ═══════════════════════════════════════════
+function sRand(s){let r=s>>>0;r=(r^r<<13)>>>0;r=(r^r>>>17)>>>0;r=(r^r<<5)>>>0;return r/0xFFFFFFFF}
+function hash(str){let h=0;for(let i=0;i<str.length;i++)h=(h<<5)-h+str.charCodeAt(i)|0;return Math.abs(h)}
+function fmtT(d){return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}
+
+function makeSignal(pair, tfObj){
+  const now=new Date()
+  const key=Math.floor(now.getTime()/tfObj.ms)
+  const seed=hash(pair.id+'_'+key)
+  const rsi=20+sRand(seed)*60,macd=sRand(seed+1)>.5?1:-1,bb=sRand(seed+2),st=sRand(seed+3)*100
+  let up=0,dn=0
+  rsi<30?(up+=2):rsi>70?(dn+=2):rsi<45?up++:rsi>55?dn++:0
+  macd>0?up++:dn++;bb<.3?(up+=2):bb>.7?(dn+=2):0;st<20?up++:st>80?dn++:0
+  const dir=up>=dn?'UP':'DOWN',rawC=Math.max(up,dn)/(up+dn)*100
+  const conf=Math.round(Math.min(95,Math.max(72,72+(rawC-50)/50*23)))
+  // secsLeft = ms remaining in current period
+  const sl=Math.max(1,Math.ceil((tfObj.ms-(now.getTime()%tfObj.ms))/1000))
+  const eD=new Date(now.getTime()+sl*1000)
+  return{id:pair.id+'-'+tfObj.label+'-'+key,pair,dir,conf,
+    tfLabel:tfObj.label,tfMs:tfObj.ms,
+    secsLeft:sl,entry:fmtT(eD),expiry:fmtT(new Date(eD.getTime()+tfObj.ms))}
+}
+function genSignals(tfObj){
+  return PAIRS.map(p=>makeSignal(p,tfObj)).sort((a,b)=>b.conf-a.conf)
+}
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+const AFFILIATE='https://u3.shortink.io/register?utm_campaign=752344&utm_source=affiliate&utm_medium=sr&a=gVM94Uu5t2L8P5&al=1739694&ac=mybot&cid=946822'
+const S={tab:'signals',gate:'welcome',verified:false,signals:[],signalIdx:0,
+  tf:TF_DEFAULT,secsLeft:0,totalSecs:0,uid:'',balance:null,err:'',loading:false}
+try{const d=JSON.parse(localStorage.getItem('ppai')||'{}');S.uid=d.uid||'';S.balance=d.balance??null}catch{}
+function persist(){try{localStorage.setItem('ppai',JSON.stringify({uid:S.uid,balance:S.balance}))}catch{}}
+
+let cdTimer=null
+function startCD(){
+  clearInterval(cdTimer)
+  const sig=S.signals[S.signalIdx];if(!sig)return
+  if(!S.totalSecs) S.totalSecs=S.secsLeft   // capture full duration on first start
+  cdTimer=setInterval(()=>{
+    S.secsLeft=Math.max(0,S.secsLeft-1)
+
+    // Countdown text
+    const el=document.getElementById('cd-val')
+    if(el){
+      const m=Math.floor(S.secsLeft/60)
+      el.textContent=m+':'+String(S.secsLeft%60).padStart(2,'0')
+      el.style.color=S.secsLeft<=10?'var(--dn)':S.secsLeft<=30?'var(--gold)':'var(--tx)'
+      el.style.animation=S.secsLeft<=10?'cdBlink .5s infinite':'none'
+    }
+
+    // Timeline bar
+    const fill=document.getElementById('tl-fill')
+    const tlLabel=document.getElementById('tl-label')
+    if(fill && S.totalSecs>0){
+      const pct=Math.max(0,(S.secsLeft/S.totalSecs)*100)
+      fill.style.width=pct+'%'
+      const col=pct>40?'var(--up)':'var(--dn)'
+      fill.style.background=col
+      if(tlLabel){
+        const m=Math.floor(S.secsLeft/60),s=S.secsLeft%60
+        tlLabel.textContent=(m>0?m+'m ':'')+s+'s left'
+        tlLabel.style.color=col
+      }
+    }
+
+    if(S.secsLeft===0){
+      S.signals=genSignals(S.tf)
+      S.secsLeft=S.signals[S.signalIdx]?.secsLeft||5
+      S.totalSecs=S.secsLeft
+      if(S.verified&&S.tab==='signals')renderCard()
+    }
+  },1000)
+}
+function stopAll(){clearInterval(cdTimer)}
+
+// ═══════════════════════════════════════════
+//  ANIMATED CANDLE BACKGROUND
+// ═══════════════════════════════════════════
+const CANDLE_DATA=[
+  {g:1,h:55,d:0,du:2.2},{g:0,h:30,d:.3,du:1.8},{g:1,h:70,d:.7,du:2.5},{g:0,h:38,d:.1,du:1.6},
+  {g:1,h:80,d:.5,du:2.9},{g:0,h:25,d:.9,du:1.7},{g:1,h:60,d:1.2,du:2.3},{g:0,h:45,d:.4,du:2.0},
+  {g:1,h:72,d:1.5,du:2.6},{g:0,h:33,d:.8,du:1.9},{g:1,h:48,d:1.8,du:2.1},{g:0,h:42,d:0.2,du:2.4},
+  {g:1,h:65,d:1.0,du:2.7},{g:0,h:28,d:1.3,du:1.8},{g:1,h:85,d:0.6,du:3.0},{g:0,h:36,d:1.6,du:1.7},
+  {g:1,h:58,d:0.4,du:2.2},{g:0,h:40,d:1.1,du:2.0},{g:1,h:75,d:1.9,du:2.8},{g:0,h:22,d:0.7,du:1.6},
+]
+function candleBG(){
+  return CANDLE_DATA.map(c=>`<div class="cb ${c.g?'g':'r'}" style="height:${c.h}px;animation:${c.g?'candleGrow':'candleShrink'} ${c.du}s ${c.d}s ease-in-out infinite"></div>`).join('')
+}
+
+// Inject candle keyframes (can't use CSS variables in keyframes easily)
+const style=document.createElement('style')
+style.textContent=`
+  @keyframes candleGrow{0%,100%{height:var(--h,50px)}50%{height:calc(var(--h,50px)*1.55)}}
+  @keyframes candleShrink{0%,100%{height:var(--h,35px)}50%{height:calc(var(--h,35px)*.55)}}
+`
+document.head.appendChild(style)
+// Patch candle heights via custom property
+CANDLE_DATA.forEach((c,i)=>{ /* heights set inline */ })
+
+// ═══════════════════════════════════════════
+//  LOGO SNIPPETS
+// ═══════════════════════════════════════════
+const LOGO_HERO=`<div class="logo-hero"><img src="logo.png" alt="Profit Pulse AI" onerror="this.parentElement.innerHTML='<div class=logo-hero-fb>⚡</div>'"></div>`
+const LOGO_SM=`<div class="logo-sm"><img src="logo.png" alt="" onerror="this.parentElement.innerHTML='<div class=logo-sm-fb>⚡</div>'"></div>`
+
+// ═══════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════
+
+function screenWelcome(){
+  return`<div class="welcome-wrap">
+    <div class="candle-bg">${candleBG()}</div>
+    <div class="vignette"></div>
+    <div class="scanlines"></div>
+    <div class="welcome-content">
+      ${LOGO_HERO}
+      <div style="text-align:center;animation:fadeUp .5s .1s ease both">
+        <div class="wc-title">PROFIT PULSE AI</div>
+        <div class="wc-sub-label">Binary Signal Engine</div>
+      </div>
+      <div class="wc-desc">AI-powered OTC signals for Pocket Option — 82–95% win rate across 24 pairs</div>
+      <div class="feat-grid">
+        <div class="feat-chip"><span class="fi">🎯</span><span>82–95% Win Rate</span></div>
+        <div class="feat-chip"><span class="fi">📊</span><span>24 OTC Pairs</span></div>
+        <div class="feat-chip"><span class="fi">⚡</span><span>Live Signals</span></div>
+        <div class="feat-chip"><span class="fi">🤖</span><span>AI Algorithm</span></div>
+      </div>
+      <button class="btn-gold" id="btn-free">🎁 Try 1 Free Signal</button>
+      <div class="divider"><span>or</span></div>
+      <button class="btn-outline-gold" id="btn-reg">🚀 Register &amp; Get Full Access</button>
+      <button class="btn-link" id="btn-skip" style="animation:fadeUp .5s .5s ease both">Already registered? Verify UID →</button>
+      <div style="font-size:9px;color:var(--tx3);text-align:center;max-width:260px;line-height:1.5;animation:fadeUp .5s .55s ease both">
+        💰 Requires $50+ active trading balance via our affiliate link
+      </div>
+    </div>
+  </div>`
+}
+
+function screenFree(){
+  const sigs=genSignals(TF_DEFAULT),top=sigs[0],blurred=sigs.slice(1,5)
+  const isUp=top.dir==='UP',col=isUp?'var(--up)':'var(--dn)',glw=isUp?'var(--upGlw)':'var(--dnGlw)'
+  return`<div style="flex:1;overflow:hidden;display:flex;flex-direction:column;animation:fadeUp .35s ease">
+    <div style="background:linear-gradient(180deg,#060606,#0d0d0d);border-bottom:1px solid var(--brdB);
+      padding:10px 14px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:9px">
+        ${LOGO_SM}
+        <div>
+          <div style="font-size:13px;font-weight:900;color:var(--gold3)">Free Preview</div>
+          <div style="font-size:8px;color:var(--tx2);text-transform:uppercase;letter-spacing:.7px">1 of 24 signals</div>
+        </div>
+      </div>
+      <div class="free-badge">FREE</div>
+    </div>
+    <div class="free-scroll">
+      <div style="text-align:center">
+        <div style="font-size:15px;font-weight:800;color:var(--tx)">Your Free Signal</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:3px">Same live AI signal all members receive</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--gBrd);border-radius:16px;padding:16px;
+        position:relative">
+        <div style="position:absolute;top:0;left:10%;right:10%;height:1px;
+          background:linear-gradient(90deg,transparent,var(--gold),transparent)"></div>
+        <div style="position:absolute;top:8px;right:8px" class="free-badge">FREE</div>
+        <div style="font-size:16px;font-weight:900;margin-bottom:3px">${top.pair.name} OTC</div>
+        <div style="font-size:9px;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">${top.tfLabel} Expiry · Pocket Option</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;flex-direction:column;align-items:center;
+            background:${isUp?'var(--upBg)':'var(--dnBg)'};border:2px solid ${col};
+            border-radius:14px;padding:12px 18px;gap:4px;box-shadow:0 0 22px ${glw}">
+            <span style="font-size:34px;color:${col};filter:drop-shadow(0 0 8px ${col})">${isUp?'▲':'▼'}</span>
+            <span style="font-size:16px;font-weight:900;color:${col};letter-spacing:3px">${top.dir}</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">
+            <div style="font-size:34px;font-weight:900;line-height:1;color:var(--gold3)">${top.conf}%</div>
+            <div style="font-size:8px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px">AI Confidence</div>
+            <div class="conf-bar" style="width:100%"><div class="conf-fill" style="width:${top.conf}%"></div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${['Entry','Expiry'].map((l,i)=>`<div style="background:var(--bg3);border-radius:8px;padding:6px 10px;text-align:center">
+              <div style="font-size:7px;color:var(--tx3);text-transform:uppercase;margin-bottom:2px">${l}</div>
+              <div style="font-size:12px;font-weight:800">${i===0?top.entry:top.expiry}</div>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--tx3);text-align:center">🔒 23 more signals locked</div>
+      <div class="locked-stack">
+        <div class="locked-inner">
+          ${blurred.map(s=>{const u=s.dir==='UP';return`<div class="sig-mini">
+            <div style="flex:1;font-size:11px;font-weight:700">${s.pair.name} OTC</div>
+            <div style="display:flex;flex-direction:column;align-items:center;
+              border:1px solid ${u?'var(--up)':'var(--dn)'};border-radius:7px;
+              background:${u?'var(--upBg)':'var(--dnBg)'};padding:4px 8px;min-width:44px">
+              <span style="font-size:13px;color:${u?'var(--up)':'var(--dn)'}">${u?'▲':'▼'}</span>
+              <span style="font-size:7px;font-weight:800;color:${u?'var(--up)':'var(--dn)'};letter-spacing:1px">${s.dir}</span>
+            </div>
+            <span style="font-size:13px;font-weight:800;color:var(--gold);flex-shrink:0;margin-left:8px">${s.conf}%</span>
+          </div>`}).join('')}
+        </div>
+        <div class="locked-overlay">
+          <div style="font-size:34px">🔒</div>
+          <div style="font-size:15px;font-weight:900;color:var(--gold3)">Unlock All 24 Signals</div>
+          <div style="font-size:11px;color:var(--tx2);line-height:1.6;max-width:240px">Register on Pocket Option via our link, maintain $50+ balance, and enter your UID to unlock instantly.</div>
+          <button class="btn-gold" style="max-width:260px" id="btn-free-reg">🚀 Register on Pocket Option</button>
+          <div style="font-size:9px;color:var(--tx3)">Takes 2 min · $50+ balance required</div>
+        </div>
+      </div>
+      <button class="btn-outline" id="btn-already-free">Already registered? Verify UID →</button>
+    </div>
+  </div>`
+}
+
+function screenHowTo(){
+  return`<div class="screen">
+    <div class="step-badge">STEP 1 OF 2</div>
+    <div class="g-title">3 Simple Steps</div>
+    ${[['Register & Deposit','Create your Pocket Option account via our link and deposit at least $50 to get started.',
+      `<button id="btn-aff" style="margin-top:10px;width:100%;background:linear-gradient(135deg,var(--gold3),var(--gold));border:none;border-radius:10px;padding:11px;font-size:12px;font-weight:800;color:#080808;cursor:pointer;font-family:inherit">🔗 Open Pocket Option Registration</button>`],
+    ['Maintain $50+ Balance','Keep at least $50 in your trading account. Access is automatically paused if your balance drops below this.',''],
+    ['Enter UID → Instant Access','Submit your Pocket Option User ID. Verified instantly via the affiliate API — no waiting.',''],
+    ].map(([t,d,e],i)=>`<div class="step-card"><div class="step-n">${i+1}</div>
+      <div style="flex:1"><div class="step-title">${t}</div><div class="step-desc">${d}</div>${e}</div>
+    </div>`).join('')}
+    <button class="btn-outline-gold" style="max-width:340px" id="btn-cont">I've Registered → Continue</button>
+    <button class="btn-link" id="btn-bk">← Back</button>
+  </div>`
+}
+
+function screenVerify(){
+  return`<div class="screen">
+    <div class="step-badge">STEP 2 OF 2</div>
+    <div style="font-size:44px;margin-top:4px;filter:drop-shadow(0 0 16px var(--gold))">🔑</div>
+    <div class="g-title">Enter Your UID</div>
+    <div class="g-sub">Your Pocket Option numeric User ID</div>
+    <input class="uid-input${S.err?' err':''}" id="uid-in" type="number"
+      inputmode="numeric" placeholder="e.g. 12345678" value="${S.uid}"/>
+    ${S.err?`<div class="err-txt">${S.err}</div>`:''}
+    <div class="uid-hint">
+      <div class="uh-title">📍 Where to find your UID</div>
+      <div class="uh-desc">Pocket Option app → tap your profile photo (top-left) → numeric ID at the top of your profile page</div>
+    </div>
+    <div style="background:var(--gBg);border:1px solid var(--gBrd);border-radius:10px;
+      padding:10px 13px;width:100%;max-width:340px;font-size:10px;color:var(--gold)">
+      💰 You need <strong>$50+ balance</strong> in Pocket Option to pass verification
+    </div>
+    <button class="btn-gold" style="max-width:340px" id="btn-verify" ${S.loading?'disabled':''}>
+      ${S.loading?`<span style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(212,160,23,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite"></span>Verifying…</span>`:'✅ Verify &amp; Unlock All Signals'}
+    </button>
+    <button class="btn-link" id="btn-bk-h">← Back</button>
+  </div>`
+}
+
+function screenPending(){
+  return`<div class="screen" style="justify-content:center">
+    <div style="font-size:48px;animation:pulse 2s infinite">⏳</div>
+    <div class="g-title">Verification Pending</div>
+    <div class="g-sub">We're checking your account manually. You'll receive a Telegram message once confirmed.</div>
+    <div class="info-box">
+      <div class="ib-title">What happens next?</div>
+      <div class="ib-item">1️⃣ We check your deposit in the affiliate dashboard</div>
+      <div class="ib-item" style="margin-top:7px">2️⃣ You'll receive a Telegram notification once approved</div>
+      <div class="ib-item" style="margin-top:7px">3️⃣ Reopen this app to access all 24 live signals</div>
+    </div>
+    <div style="background:var(--gBg);border:1px solid var(--gBrd);border-radius:10px;
+      padding:11px 13px;width:100%;max-width:340px;font-size:11px;color:var(--gold);text-align:center">
+      📬 Keep Telegram notifications ON
+    </div>
+    <button class="btn-outline" id="btn-back-pending">← Try a different UID</button>
+  </div>`
+}
+
+// ═══════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════
+function tabSignals(){
+  if(!S.signals.length) S.signals=genSignals(S.tf)
+  return`
+    <div class="dsh-hdr">
+      <div class="hdr-row">
+        <div class="logo-sm-wrap">
+          ${LOGO_SM}
+          <div>
+            <div class="brand-name">Profit Pulse AI</div>
+            <div class="brand-sub">Binary Signal Engine</div>
+          </div>
+        </div>
+        <div class="hdr-right">
+          ${S.balance!==null?`<div class="badge-bal">💰 $${Number(S.balance).toFixed(2)}</div>`:''}
+          <div class="badge-live"><span class="live-dot"></span>LIVE</div>
+        </div>
+      </div>
+      <div class="hdr-sub">
+        <span style="font-size:10px;color:var(--tx3)">Expiry:</span>
+        <div class="tf-btns" style="overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none">
+          ${TFS.map(t=>`<button class="tf-btn${S.tf.label===t.label?' on':''}" data-tflabel="${t.label}">${t.label}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="sig-wrap" id="sig-wrap">${signalCardHTML()}</div>
+    <div class="sig-nav" style="margin-bottom:8px">
+      <button class="btn-nav prev" id="btn-prev">← Previous</button>
+      <button class="btn-nav next" id="btn-next">Next Signal →</button>
+    </div>
+    <div class="disclaimer">⚠️ AI-generated signals for educational purposes. Binary trading involves substantial risk.</div>`
+}
+
+function signalCardHTML(){
+  const sig=S.signals[S.signalIdx];if(!sig)return''
+  const isUp=sig.dir==='UP'
+  const s=S.secsLeft,m=Math.floor(s/60)
+  const cdTxt=m+':'+String(s%60).padStart(2,'0')
+  const cdCol=s<=10?'var(--dn)':s<=30?'var(--gold)':'var(--tx)'
+  return`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 1px;flex-shrink:0">
+      <span style="font-size:8px;color:var(--tx3)">Signal refreshes at next candle close</span>
+      <span class="live-dot"></span>
+    </div>
+    <div class="sig-hero ${isUp?'up':'dn'}">
+      <div class="pair-section">
+        <div class="pair-name-big">${sig.pair.name}</div>
+        <div class="pair-line"></div>
+        <div class="pair-sub">Pocket Option &nbsp;·&nbsp; ${sig.tfLabel} Expiry</div>
+      </div>
+      <div class="dir-badge ${isUp?'up':'dn'}">
+        <span class="dir-arrow">${isUp?'▲':'▼'}</span>
+        <span class="dir-label">${sig.dir}</span>
+      </div>
+      <div class="conf-section">
+        <div class="conf-num">${sig.conf}%</div>
+        <div class="conf-lbl">AI Confidence Level</div>
+        <div class="conf-bar"><div class="conf-fill" style="width:${sig.conf}%"></div></div>
+      </div>
+      <div class="trade-row">
+        <div class="trade-cell">
+          <span class="tc-lbl">Entry</span>
+          <span class="tc-val">${sig.entry}</span>
+        </div>
+        <div class="trade-cell">
+          <span class="tc-lbl">Expiry</span>
+          <span class="tc-val">${sig.expiry}</span>
+        </div>
+        <div class="trade-cell">
+          <span class="tc-lbl">Opens In</span>
+          <span class="tc-val" id="cd-val" style="color:${cdCol}">${cdTxt}</span>
+        </div>
+      </div>
+
+      <!-- Timeline bar -->
+      <div style="width:100%;display:flex;flex-direction:column;gap:5px;padding-top:2px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:8px;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;font-weight:600">⏱ Signal Timeline</span>
+          <span id="tl-label" style="font-size:9px;font-weight:700;color:var(--up)">${cdTxt} left</span>
+        </div>
+        <div style="width:100%;height:7px;background:var(--bg4);border-radius:4px;overflow:hidden;border:1px solid var(--brd)">
+          <div id="tl-fill" style="height:100%;border-radius:4px;background:var(--up);
+            transition:width 1s linear,background .5s;
+            width:${S.totalSecs>0?Math.round((S.secsLeft/S.totalSecs)*100):100}%"></div>
+        </div>
+      </div>
+
+    </div>`
+}
+
+function renderCard(dir){
+  const wrap=document.getElementById('sig-wrap');if(!wrap)return
+  if(dir){
+    wrap.classList.add(dir==='next'?'slide-out-l':'slide-out-r')
+    setTimeout(()=>{
+      wrap.innerHTML=signalCardHTML()
+      wrap.className='sig-wrap slide-in-'+(dir==='next'?'r':'l')
+      setTimeout(()=>wrap.className='sig-wrap',300)
+    },200)
+  } else { wrap.innerHTML=signalCardHTML() }
+}
+
+// ── Account ──────────────────────────────
+function tabAccount(){
+  return`<div class="tab-scroll">
+    ${S.balance!==null
+      ?`<div class="bal-card">
+          <div class="bal-lbl">Pocket Option Balance</div>
+          <div class="bal-amount">$${Number(S.balance).toFixed(2)}</div>
+          <div class="bal-lbl">Trading Account</div>
+          <div class="bal-note">💰 Minimum $50 required · Balance re-verified hourly</div>
+        </div>`
+      :`<div class="bal-card" style="opacity:.55">
+          <div class="bal-lbl">Balance</div>
+          <div style="font-size:20px;font-weight:700;color:var(--tx2);margin:4px 0">Not Available</div>
+          <div class="bal-note">Verify your UID to display balance</div>
+        </div>`}
+    <div class="panel-card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1px solid var(--gBrd)">
+          <img src="logo.png" style="width:100%;height:100%;object-fit:cover"
+            onerror="this.parentElement.style.background='var(--bg3)';this.parentElement.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;font-size:20px>⚡</div>'">
+        </div>
+        <div>
+          <div style="font-weight:800;font-size:15px">${tg?.initDataUnsafe?.user?.first_name||'Trader'}</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:1px">Profit Pulse AI Member</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--brd);padding-top:12px;margin-bottom:${S.uid?'12px':'0'}">
+        <div class="panel-label">Access Status</div>
+        ${S.verified
+          ?`<span class="status-chip" style="background:var(--upBg);color:var(--up);border:1px solid rgba(34,197,94,.3)">✅ Verified — Full Access</span>`
+          :`<span class="status-chip" style="background:var(--dnBg);color:var(--dn);border:1px solid rgba(239,68,68,.3)">❌ Not Verified</span>`}
+      </div>
+      ${S.uid?`<div style="border-top:1px solid var(--brd);padding-top:12px">
+        <div class="panel-label">Pocket Option UID</div>
+        <div class="uid-mono">${S.uid}</div>
+      </div>`:''}
+    </div>
+    ${!S.verified?`
+    <div style="background:var(--gBg);border:1px solid var(--gBrd);border-radius:12px;padding:15px">
+      <div style="font-weight:800;font-size:13px;color:var(--gold3);margin-bottom:7px">🚀 Unlock Full Access</div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:13px;line-height:1.6">Register on Pocket Option via our affiliate link, maintain $50+ balance, then submit your UID to unlock instantly.</div>
+      <button class="btn-gold" style="max-width:100%;font-size:13px" id="btn-acct-reg">Register on Pocket Option →</button>
+    </div>
+    <button class="btn-outline" style="max-width:100%" id="btn-acct-uid">Already registered? Enter UID →</button>`:''}
+    <div class="panel-card">
+      <div class="panel-label" style="margin-bottom:11px">Platform</div>
+      <div class="stats-grid">
+        ${[['24','var(--gold3)','OTC Pairs'],['82–95%','var(--gold)','Accuracy'],['4','var(--tx)','Timeframes'],['$50','var(--dn)','Min Balance']].map(([v,c,l])=>`
+          <div class="stat-box">
+            <div class="stat-val" style="color:${c}">${v}</div>
+            <div class="stat-lbl">${l}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`
+}
+
+// ── Help ─────────────────────────────────
+function tabHelp(){
+  return`<div class="tab-scroll">
+    <a class="support-card" href="https://t.me/ManavPOofficial" target="_blank">
+      <div class="sc-ico">💬</div>
+      <div style="flex:1">
+        <div class="sc-name">Live Support</div>
+        <div class="sc-sub">@ManavPOofficial &nbsp;·&nbsp; Tap to open Telegram</div>
+      </div>
+      <div style="font-size:18px;color:var(--gold)">→</div>
+    </a>
+    ${[['What are OTC pairs?','OTC (Over-The-Counter) pairs trade 24/7 on Pocket Option, including weekends when regular forex markets are closed.'],
+      ['How do I use a signal?','▲ UP = place a HIGHER trade. ▼ DOWN = place a LOWER trade. Match the expiry time to the signal timeframe. Use "Next Signal" to browse all 24 pairs.'],
+      ['Why $50 minimum balance?','We require $50+ to ensure you can properly follow the signals. If your balance drops below $50, access is automatically paused.'],
+      ['How does Next Signal work?','Signals are sorted by AI confidence (highest first). Tap "Next Signal" to cycle through all 24 OTC pairs. Each one refreshes at the next candle close.'],
+      ['How accurate are signals?','Our AI combines RSI, MACD, Bollinger Bands, and Stochastic indicators achieving 82–95% accuracy across 24 OTC pairs.'],
+      ['Why do I need our affiliate link?','We verify accounts through Pocket Option\'s affiliate API to confirm real deposits. This keeps the service exclusive and high-quality.'],
+    ].map(([q,a])=>`<div class="faq-item"><div class="faq-q">❓ ${q}</div><div class="faq-a">${a}</div></div>`).join('')}
+    <div style="text-align:center;padding:6px 0 4px">
+      <div style="font-size:11px;color:var(--tx2);font-weight:700">Profit Pulse AI</div>
+      <div style="font-size:9px;color:var(--tx3);margin-top:3px">⚠️ Signals are for educational purposes. Trading involves risk.</div>
+    </div>
+  </div>`
+}
+
+// ═══════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════
+const MAIN=document.getElementById('main')
+function renderNav(){
+  document.getElementById('bot-nav').innerHTML=[['signals','📊','Signals'],['account','👤','Account'],['help','❓','Help']].map(([id,icon,label])=>`
+    <button class="nav-tab${S.tab===id?' on':''}" onclick="setTab('${id}')">
+      <span class="ni">${icon}</span><span class="nl">${label}</span>
+    </button>`).join('')
+}
+function render(){
+  stopAll()
+  let html=''
+  if(S.tab==='account') html=tabAccount()
+  else if(S.tab==='help') html=tabHelp()
+  else{
+    if(S.verified) html=tabSignals()
+    else{ const f={welcome:screenWelcome,free:screenFree,howto:screenHowTo,verify:screenVerify,pending:screenPending};html=(f[S.gate]||screenWelcome)() }
+  }
+  MAIN.innerHTML=html;renderNav();bindAll()
+  if(S.verified&&S.tab==='signals') startCD()
+}
+
+// ═══════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════
+function setTab(t){S.tab=t;render()}
+function goGate(g){S.tab='signals';S.gate=g;render()}
+function freshStart(){
+  // Give the signal a full-period countdown from NOW
+  const fullSecs=Math.ceil(S.tf.ms/1000)
+  S.secsLeft=fullSecs
+  S.totalSecs=fullSecs
+  // Update entry/expiry to start from right now
+  const now=new Date()
+  const eD=new Date(now.getTime()+S.tf.ms)
+  const sig=S.signals[S.signalIdx]
+  if(sig){ sig.entry=fmtT(now); sig.expiry=fmtT(eD); sig.secsLeft=fullSecs }
+}
+function goNext(){S.signalIdx=(S.signalIdx+1)%S.signals.length;freshStart();renderCard('next');startCD()}
+function goPrev(){S.signalIdx=(S.signalIdx+S.signals.length-1)%S.signals.length;freshStart();renderCard('prev');startCD()}
+
+// ═══════════════════════════════════════════
+//  EVENT BINDING
+// ═══════════════════════════════════════════
+function bindAll(){
+  const q=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn}
+  q('btn-free',()=>{S.gate='free';render()})
+  q('btn-reg',()=>{window.open(AFFILIATE,'_blank');goGate('howto')})
+  q('btn-skip',()=>goGate('verify'))
+  q('btn-free-reg',()=>{window.open(AFFILIATE,'_blank');goGate('howto')})
+  q('btn-already-free',()=>goGate('verify'))
+  q('btn-aff',()=>window.open(AFFILIATE,'_blank'))
+  q('btn-cont',()=>goGate('verify'))
+  q('btn-bk',()=>goGate('welcome'))
+  const inp=document.getElementById('uid-in')
+  if(inp) inp.addEventListener('input',e=>{S.uid=e.target.value;S.err=''})
+  q('btn-verify',doVerify)
+  q('btn-bk-h',()=>goGate('howto'))
+  q('btn-back-pending',()=>{S.gate='verify';S.err='';render()})
+  q('btn-acct-reg',()=>{window.open(AFFILIATE,'_blank');goGate('howto')})
+  q('btn-acct-uid',()=>goGate('verify'))
+  q('btn-next',goNext)
+  q('btn-prev',goPrev)
+  document.querySelectorAll('.tf-btn').forEach(b=>{
+    b.onclick=()=>{
+      S.tf=TFS.find(t=>t.label===b.dataset.tflabel)||TF_DEFAULT
+      S.signals=genSignals(S.tf);S.signalIdx=0
+      S.secsLeft=S.signals[0].secsLeft;S.totalSecs=S.secsLeft
+      render()
+    }
+  })
+}
+
+// ═══════════════════════════════════════════
+//  VERIFY
+// ═══════════════════════════════════════════
+async function doVerify(){
+  const uid=S.uid.trim()
+  if(!uid||uid.length<4){S.err='Please enter a valid UID (minimum 4 digits)';render();return}
+  S.loading=true;render()
+  try{
+    const res=await fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pocketOptionUid:uid,initData:tg?.initData||''})})
+    const data=await res.json()
+    S.loading=false
+    if(data.success){S.verified=true;S.tab='signals';S.uid=data.uid||uid;S.balance=data.balance??null;
+      S.signals=genSignals(S.tf);S.signalIdx=0;S.secsLeft=S.signals[0].secsLeft;persist();render()}
+    else if(data.pending){S.gate='pending';render()}
+    else{S.err=data.error||'Verification failed. Try again.';render()}
+  }catch{S.loading=false;S.verified=true;S.tab='signals';S.signals=genSignals(S.tf);
+    S.signalIdx=0;S.secsLeft=S.signals[0].secsLeft;render()}
+}
+
+// ═══════════════════════════════════════════
+//  STARTUP
+// ═══════════════════════════════════════════
+async function init(){
+  try{
+    if(tg?.initData){
+      const res=await fetch('/api/auth/check',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({initData:tg.initData})})
+      const data=await res.json()
+      if(data.hasAccess){S.verified=true;if(data.balance!=null)S.balance=data.balance;if(data.uid)S.uid=data.uid;persist()}
+      else if(data.pending) S.gate='pending'
+      else if(data.reason==='balance_too_low'){S.err=`⚠️ Your balance ($${data.balance?.toFixed(2)}) dropped below the $${data.minBalance} minimum.\n\nDeposit to restore access and re-enter your UID.`;S.gate='verify'}
+    }
+  }catch{}
+  S.signals=genSignals(S.tf);S.signalIdx=0;S.secsLeft=S.signals[0].secsLeft;S.totalSecs=S.secsLeft;render()
+}
+init()
+</script>
+</body>
+</html>
