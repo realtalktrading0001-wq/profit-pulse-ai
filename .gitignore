@@ -1,0 +1,6 @@
+.env
+node_modules/
+data/
+.claude/
+serve.ps1
+*.txt
