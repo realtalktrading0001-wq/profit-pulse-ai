@@ -22,6 +22,7 @@ const PO_CAMPAIGN   = process.env.PO_CAMPAIGN_ID  || '752344'
 const PO_HASH       = process.env.PO_API_HASH                       // 6b1c18ca67108c1dbf1edc69eb3b1a7c
 const MIN_BALANCE        = parseFloat(process.env.MIN_BALANCE        || '50')  // $50 to GET access (first time)
 const MAINTAIN_BALANCE   = parseFloat(process.env.MAINTAIN_BALANCE   || '20')  // $20 to KEEP access (ongoing)
+const AFFILIATE_ID       = process.env.AFFILIATE_ID || '1739694'               // your al= ID in the affiliate link
 const BALANCE_TTL   = 60 * 60 * 1000                                // re-check balance every 1h
 
 // ─── File-based user database ─────────────────────────────────────────────────
@@ -114,9 +115,14 @@ async function checkPocketOption(uid) {
     const hasDeposit  = sumDeposits > 0 || sumFtd > 0
     const hasBalance  = balance >= MIN_BALANCE
 
+    // Check user registered under OUR specific affiliate link (al=1739694)
+    const userLink    = data.link || ''
+    const isOurAffiliate = userLink.includes(`al=${AFFILIATE_ID}`)
+    console.log(`[PO API] affiliate check: link=${userLink} | isOurs=${isOurAffiliate}`)
+
     return {
-      ok:         true,
-      affiliated: true,
+      ok:          true,
+      affiliated:  isOurAffiliate,   // true only if under YOUR affiliate link
       hasDeposit,
       hasBalance,
       balance,
