@@ -137,12 +137,28 @@ if (TOKEN) {
     const verified = getUser(userId)?.verified
 
     const text = verified
-      ? `⚡ *Welcome back, ${name}!*\n\nTap below to open your live signal dashboard. 📊`
-      : `⚡ *Welcome to Profit Pulse AI, ${name}!*\n\n🤖 AI-powered OTC binary signals for Pocket Option\n\n*Features:*\n• 24 OTC pairs — live signals\n• 82–95% win rate accuracy\n• 1m 2m 3m 5m expiry\n• RSI · MACD · Bollinger AI\n\n*To unlock:*\n1️⃣ Register via our affiliate link & deposit\n2️⃣ Maintain $${MIN_BALANCE}+ in your account\n3️⃣ Enter your UID → instant access ✅\n\nTap below 👇`
+      ? `⚡ *Welcome back, ${name}!*\n\n` +
+        `Your signals are live and ready! 📊\n\n` +
+        `Tap the button below to open your dashboard 👇`
+      : `🤖 *Welcome to Profit Pulse AI!*\n` +
+        `_Hey ${name}, great to have you here!_ 👋\n\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `⚡ *AI-Powered OTC Signals*\n` +
+        `📊 28 OTC Pairs · 6 Timeframes\n` +
+        `🎯 82–95% Win Rate Accuracy\n` +
+        `🔴🟢 Live UP/DOWN Signals\n` +
+        `⏱ 5s · 15s · 30s · 1m · 2m · 5m\n` +
+        `━━━━━━━━━━━━━━━━━━━\n\n` +
+        `*To get full access:*\n` +
+        `1️⃣ Register on Pocket Option via our link\n` +
+        `2️⃣ Deposit minimum *$50*\n` +
+        `3️⃣ Enter your UID in the app → *Instant access* ✅\n\n` +
+        `🎁 Try 1 free signal first — no registration needed!\n\n` +
+        `👇 *Tap below to start trading smarter:*`
 
     bot.sendMessage(id, text, {
       parse_mode:   'Markdown',
-      reply_markup: appBtn(verified ? '📊 Open Dashboard' : '🚀 Open Profit Pulse AI'),
+      reply_markup: appBtn(verified ? '📊 Open Signal Dashboard' : '🚀 Start Trading with Profit Pulse AI'),
     }).catch(console.error)
   })
 
