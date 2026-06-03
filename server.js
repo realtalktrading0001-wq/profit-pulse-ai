@@ -19,7 +19,8 @@ const AFFL          = process.env.AFFILIATE_LINK || 'https://u3.shortink.io/regi
 const ADMINS        = (process.env.ADMIN_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
 const PO_CAMPAIGN   = process.env.PO_CAMPAIGN_ID  || '752344'
 const PO_HASH       = process.env.PO_API_HASH                       // 6b1c18ca67108c1dbf1edc69eb3b1a7c
-const MIN_BALANCE   = parseFloat(process.env.MIN_BALANCE || '20')   // $20 minimum
+const MIN_BALANCE        = parseFloat(process.env.MIN_BALANCE        || '50')  // $50 to GET access (first time)
+const MAINTAIN_BALANCE   = parseFloat(process.env.MAINTAIN_BALANCE   || '20')  // $20 to KEEP access (ongoing)
 const BALANCE_TTL   = 60 * 60 * 1000                                // re-check balance every 1h
 
 // ─── File-based user database ─────────────────────────────────────────────────
@@ -417,8 +418,9 @@ app.post('/api/auth/check', async (req, res) => {
     const r = await checkPocketOption(user.pocketOptionUid)
     setUser(userId, { lastBalanceCheck: new Date().toISOString() })
 
-    // Only revoke if API EXPLICITLY confirms low balance (don't revoke on API error)
-    if (!r.apiError && r.affiliated && !r.hasBalance) {
+    // Ongoing check: use MAINTAIN_BALANCE ($20) — lower than initial $50 requirement
+    // User can trade and lose some funds, but must keep at least $20 to stay active
+    if (!r.apiError && r.affiliated && r.balance < MAINTAIN_BALANCE) {
       setUser(userId, {
         verified:      false,
         revokedAt:     new Date().toISOString(),
@@ -428,7 +430,7 @@ app.post('/api/auth/check', async (req, res) => {
 
       if (!userId.startsWith('dev-')) {
         bot?.sendMessage(userId,
-          `⚠️ *Access Paused*\n\nYour Pocket Option balance ($${r.balance.toFixed(2)}) has dropped below the $${MIN_BALANCE} minimum.\n\nDeposit to restore your balance and reopen the app to regain access.`,
+          `⚠️ *Access Paused*\n\nYour Pocket Option balance ($${r.balance.toFixed(2)}) has dropped below the $${MAINTAIN_BALANCE} minimum to maintain access.\n\nDeposit to bring your balance above $${MAINTAIN_BALANCE} and reopen the app to regain access.`,
           { parse_mode: 'Markdown' }
         ).catch(() => {})
       }
@@ -437,7 +439,7 @@ app.post('/api/auth/check', async (req, res) => {
         hasAccess:  false,
         reason:     'balance_too_low',
         balance:    r.balance,
-        minBalance: MIN_BALANCE,
+        minBalance: MAINTAIN_BALANCE,
       })
     }
   }
