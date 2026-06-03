@@ -70,11 +70,15 @@ async function checkPocketOption(uid) {
   }
 
   const url = `https://pocketpartners.com/en/api/user-info/${encodeURIComponent(uid)}/${PO_CAMPAIGN}/${PO_HASH}`
+  console.log(`[PO API] Calling: ${url.replace(PO_HASH, '***')}`)
 
   try {
     const res = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
-      signal:  AbortSignal.timeout(9000),
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; ProfitPulseAI/1.0)',
+      },
+      signal: AbortSignal.timeout(12000),
     })
 
     console.log(`[PO API] uid=${uid} → status=${res.status}`)
@@ -460,6 +464,20 @@ app.post('/api/admin/approve', (req, res) => {
   if (!getUser(userId)) return res.status(404).json({ error: 'User not found' })
   setUser(userId, { verified: true, pending: false, verifiedAt: new Date().toISOString(), approvedBy: 'admin' })
   res.json({ success: true })
+})
+
+// GET /api/test-po?uid=123456 — test if PO API is reachable from this server
+app.get('/api/test-po', async (req, res) => {
+  const uid = req.query.uid || '125901903'
+  const result = await checkPocketOption(uid)
+  res.json({
+    result,
+    config: {
+      PO_HASH:     PO_HASH     ? '✅ set' : '❌ MISSING',
+      PO_CAMPAIGN: PO_CAMPAIGN ? '✅ ' + PO_CAMPAIGN : '❌ MISSING',
+    },
+    apiUrl: `https://pocketpartners.com/en/api/user-info/${uid}/${PO_CAMPAIGN}/***`,
+  })
 })
 
 // ─── Free signal tracking ─────────────────────────────────────────────────────
