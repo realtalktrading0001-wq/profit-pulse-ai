@@ -460,6 +460,31 @@ app.post('/api/admin/approve', (req, res) => {
   res.json({ success: true })
 })
 
+// ─── Free signal tracking ─────────────────────────────────────────────────────
+// POST /api/free/use — record that this TG user used their free signal
+app.post('/api/free/use', (req, res) => {
+  const { initData } = req.body
+  if (!initData || !TOKEN) return res.json({ ok: true })
+  const tgUser = validateTgAuth(initData, TOKEN)
+  if (!tgUser) return res.json({ ok: true })
+  setUser(String(tgUser.id), {
+    telegramId: String(tgUser.id),
+    freeSignalUsed: true,
+    freeSignalUsedAt: new Date().toISOString(),
+  })
+  res.json({ ok: true })
+})
+
+// POST /api/free/check — check if this TG user already used free signal
+app.post('/api/free/check', (req, res) => {
+  const { initData } = req.body
+  if (!initData || !TOKEN) return res.json({ used: false })
+  const tgUser = validateTgAuth(initData, TOKEN)
+  if (!tgUser) return res.json({ used: false })
+  const user = getUser(String(tgUser.id))
+  res.json({ used: !!user?.freeSignalUsed })
+})
+
 // GET /health
 app.get('/health', (_req, res) => res.json({
   status:     'ok',
