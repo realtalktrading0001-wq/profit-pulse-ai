@@ -8,6 +8,7 @@ import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import fs        from 'fs'
 import crypto    from 'crypto'
+import https     from 'https'
 import 'dotenv/config'
 
 const __dir         = dirname(fileURLToPath(import.meta.url))
@@ -63,6 +64,25 @@ function validateTgAuth(initData, token) {
 //    is_verified    — account email verified
 //    uid            — confirms UID is under our affiliate
 // ═══════════════════════════════════════════════════════════════════════════════
+// ── Low-level HTTPS GET using Node built-in (works on all Node versions) ─────
+function httpsGet(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, {
+      headers: {
+        'Accept':     'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; ProfitPulseAI/1.0)',
+      },
+      timeout: 12000,
+    }, (res) => {
+      let body = ''
+      res.on('data', chunk => body += chunk)
+      res.on('end', () => resolve({ status: res.statusCode, body }))
+    })
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')) })
+    req.on('error', reject)
+  })
+}
+
 async function checkPocketOption(uid) {
   if (!PO_HASH) {
     console.warn('[PO API] PO_API_HASH not set in .env')
@@ -70,32 +90,24 @@ async function checkPocketOption(uid) {
   }
 
   const url = `https://pocketpartners.com/en/api/user-info/${encodeURIComponent(uid)}/${PO_CAMPAIGN}/${PO_HASH}`
-  console.log(`[PO API] Calling: ${url.replace(PO_HASH, '***')}`)
+  console.log(`[PO API] Calling: /api/user-info/${uid}/${PO_CAMPAIGN}/***`)
 
   try {
-    const res = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; ProfitPulseAI/1.0)',
-      },
-      signal: AbortSignal.timeout(12000),
-    })
-
-    console.log(`[PO API] uid=${uid} → status=${res.status}`)
+    const { status, body } = await httpsGet(url)
+    console.log(`[PO API] uid=${uid} → status=${status} body=${body.slice(0,120)}`)
 
     // 404 = UID not found under our affiliate
-    if (res.status === 404) {
+    if (status === 404) {
       return { ok: false, affiliated: false, reason: 'UID not found under our affiliate link' }
     }
 
-    // Any other non-200 = API issue
-    if (!res.ok) {
-      return { ok: false, apiError: true, reason: `Pocket Partners API error (${res.status})` }
+    // Any non-200 = API issue
+    if (status !== 200) {
+      return { ok: false, apiError: true, reason: `Pocket Partners API error (${status})` }
     }
 
-    const data = await res.json()
+    const data = JSON.parse(body)
 
-    // Parse key values
     const balance     = parseFloat(data.balance     ?? 0)
     const sumDeposits = parseFloat(data.sum_deposits ?? 0)
     const sumFtd      = parseFloat(data.sum_ftd      ?? 0)
@@ -104,7 +116,7 @@ async function checkPocketOption(uid) {
 
     return {
       ok:         true,
-      affiliated: true,    // API returned data → user IS under our link
+      affiliated: true,
       hasDeposit,
       hasBalance,
       balance,
@@ -113,8 +125,8 @@ async function checkPocketOption(uid) {
     }
 
   } catch (err) {
-    console.error('[PO API] Network error:', err.message)
-    return { ok: false, apiError: true, reason: 'Could not reach Pocket Partners API' }
+    console.error('[PO API] Error:', err.message)
+    return { ok: false, apiError: true, reason: `Network error: ${err.message}` }
   }
 }
 
