@@ -19,7 +19,7 @@ const AFFL          = process.env.AFFILIATE_LINK || 'https://u3.shortink.io/regi
 const ADMINS        = (process.env.ADMIN_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
 const PO_CAMPAIGN   = process.env.PO_CAMPAIGN_ID  || '752344'
 const PO_HASH       = process.env.PO_API_HASH                       // 6b1c18ca67108c1dbf1edc69eb3b1a7c
-const MIN_BALANCE   = parseFloat(process.env.MIN_BALANCE || '50')   // $50 minimum
+const MIN_BALANCE   = parseFloat(process.env.MIN_BALANCE || '20')   // $20 minimum
 const BALANCE_TTL   = 60 * 60 * 1000                                // re-check balance every 1h
 
 // ─── File-based user database ─────────────────────────────────────────────────
@@ -151,7 +151,7 @@ if (TOKEN) {
         `━━━━━━━━━━━━━━━━━━━\n\n` +
         `*To get full access:*\n` +
         `1️⃣ Register on Pocket Option via our link\n` +
-        `2️⃣ Deposit minimum *$50*\n` +
+        `2️⃣ Deposit minimum *$20*\n` +
         `3️⃣ Enter your UID in the app → *Instant access* ✅\n\n` +
         `🎁 Try 1 free signal first — no registration needed!\n\n` +
         `👇 *Tap below to start trading smarter:*`
@@ -301,8 +301,8 @@ app.get('/api/signals', (req, res) => {
 //    1. Call Pocket Partners API → check if UID is under our affiliate
 //    2a. Not affiliated (404)  → ❌ reject
 //    2b. No deposit yet        → ❌ reject with deposit message
-//    2c. Has deposit, balance < $50 → ❌ need $50+
-//    2d. Has deposit, balance ≥ $50 → ✅ grant access instantly
+//    2c. Has deposit, balance < $20 → ❌ need $20+
+//    2d. Has deposit, balance ≥ $20 → ✅ grant access instantly
 //    2e. API error / timeout   → ⏳ pending queue, admin notified
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/auth/verify', async (req, res) => {
