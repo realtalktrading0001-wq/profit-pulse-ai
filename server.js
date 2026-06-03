@@ -404,8 +404,24 @@ app.post('/api/auth/verify', async (req, res) => {
   })
 
   notifyAdmins(bot,
-    `⚠️ *Manual Check Needed*\nTG: \`${userId}\`\nPO UID: \`${uid}\`\nReason: ${r.reason}\n\n/approve ${uid}  OR  /deny ${uid}`
+    `⚠️ *New User Waiting for Approval*\n\n` +
+    `👤 TG ID: \`${userId}\`\n` +
+    `🔢 PO UID: \`${uid}\`\n` +
+    `❓ Reason: ${r.reason}\n\n` +
+    `👉 Check in your Pocket Partners dashboard:\n` +
+    `https://pocketpartners.com/en/traders\n\n` +
+    `Then reply:\n` +
+    `✅ /approve ${uid}\n` +
+    `❌ /deny ${uid}`
   )
+
+  // Also send user a friendly waiting message
+  if (bot && userId && !userId.startsWith('dev-')) {
+    bot.sendMessage(userId,
+      `⏳ *Verifying your account...*\n\nWe're checking your Pocket Option account manually. You'll receive a notification here within a few minutes once approved! 🚀`,
+      { parse_mode: 'Markdown' }
+    ).catch(() => {})
+  }
 
   return res.json({
     success: false,
