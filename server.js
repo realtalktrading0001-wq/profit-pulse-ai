@@ -500,18 +500,31 @@ app.post('/api/admin/approve', (req, res) => {
   res.json({ success: true })
 })
 
-// GET /api/test-po?uid=123456 — test if PO API is reachable from this server
+// GET /api/test-po?uid=123456 — test all hash combinations automatically
 app.get('/api/test-po', async (req, res) => {
-  const uid = req.query.uid || '125901903'
-  const result = await checkPocketOption(uid)
-  res.json({
-    result,
-    config: {
-      PO_HASH:     PO_HASH     ? '✅ set' : '❌ MISSING',
-      PO_CAMPAIGN: PO_CAMPAIGN ? '✅ ' + PO_CAMPAIGN : '❌ MISSING',
-    },
-    apiUrl: `https://pocketpartners.com/en/api/user-info/${uid}/${PO_CAMPAIGN}/***`,
-  })
+  const uid    = req.query.uid || '133254094'
+  const token  = 'suTC6e89oYB4O9RV4ynS'
+  const md5tok = crypto.createHash('md5').update(token).digest('hex')
+  const sha256 = crypto.createHash('sha256').update(token).digest('hex').slice(0,32)
+
+  const attempts = [
+    { label: 'token_as_hash',    hash: token },
+    { label: 'md5_of_token',     hash: md5tok },
+    { label: 'sha256_of_token',  hash: sha256 },
+    { label: 'current_PO_HASH',  hash: PO_HASH },
+  ]
+
+  const results = []
+  for (const a of attempts) {
+    const url = `https://pocketpartners.com/en/api/user-info/${uid}/${PO_CAMPAIGN}/${a.hash}`
+    try {
+      const { status, body } = await httpsGet(url)
+      results.push({ label: a.label, hash: a.hash, status, preview: body.slice(0,150) })
+    } catch(e) {
+      results.push({ label: a.label, hash: a.hash, status: 'ERROR', preview: e.message })
+    }
+  }
+  res.json({ uid, md5ofToken: md5tok, results })
 })
 
 // ─── Free signal tracking ─────────────────────────────────────────────────────
