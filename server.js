@@ -94,8 +94,8 @@ async function checkPocketOption(uid) {
   // Hash is computed PER REQUEST: md5(user_id:partner_id:api_token)
   const hashInput = `${uid}:${PO_CAMPAIGN}:${PO_API_TOKEN}`
   const hash      = crypto.createHash('md5').update(hashInput).digest('hex')
-  const url       = `https://pocketpartners.com/api/user-info/${uid}/${PO_CAMPAIGN}/${hash}`
-  console.log(`[PO API] uid=${uid} hash=${hash} url=${url}`)
+  const url       = `https://pocketpartners.com/en/api/user-info/${uid}/${PO_CAMPAIGN}/${hash}`
+  console.log(`[PO API] uid=${uid} hash=${hash}`)
 
   try {
     const { status, body } = await httpsGet(url)
