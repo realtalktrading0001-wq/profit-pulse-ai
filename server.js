@@ -125,14 +125,13 @@ async function checkPocketOption(uid) {
     const hasDeposit  = sumDeposits > 0 || sumFtd > 0
     const hasBalance  = balance >= MIN_BALANCE
 
-    // Check user registered under OUR specific affiliate link (al=1739694)
-    const userLink    = data.link || ''
-    const isOurAffiliate = userLink.includes(`al=${AFFILIATE_ID}`)
-    console.log(`[PO API] affiliate check: link=${userLink} | isOurs=${isOurAffiliate}`)
+    // If API returned data with OUR token → user IS our affiliate ✅
+    // No extra link check needed — the dynamic hash already ensures only our users are returned
+    console.log(`[PO API] uid=${uid} balance=${balance} deposits=${sumDeposits} hasBalance=${hasBalance}`)
 
     return {
       ok:          true,
-      affiliated:  isOurAffiliate,   // true only if under YOUR affiliate link
+      affiliated:  true,
       hasDeposit,
       hasBalance,
       balance,
