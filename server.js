@@ -214,8 +214,12 @@ if (TOKEN) {
 
   // /help
   bot.onText(/\/help/, msg => {
+    const isAdmin = ADMINS.includes(String(msg.from.id))
+    const adminCmds = isAdmin
+      ? `\n\n*Admin Commands:*\n/stats — Overview of all users\n/userlist — All verified users with details\n/user <PO\\_UID> — Check specific user\n/remove <PO\\_UID> — Revoke user access\n/approve <PO\\_UID> — Grant access\n/deny <PO\\_UID> — Deny pending user\n/pending — Users awaiting approval`
+      : ''
     bot.sendMessage(msg.chat.id,
-      `*Profit Pulse AI — Commands*\n\n/start   — Open the app\n/signals — View live signals\n/status  — Check your access\n/help    — Show this menu`,
+      `*Profit Pulse AI — Commands*\n\n/start   — Open the app\n/signals — View live signals\n/status  — Check your access\n/help    — Show this menu${adminCmds}`,
       { parse_mode: 'Markdown' }
     )
   })
@@ -265,13 +269,119 @@ if (TOKEN) {
     }
   })
 
+  // /stats — quick overview
+  bot.onText(/\/stats/, msg => {
+    if (!ADMINS.includes(String(msg.from.id))) return
+    const all      = getAllUsers()
+    const verified = all.filter(u => u.verified)
+    const pending  = all.filter(u => u.pending && !u.verified)
+    const denied   = all.filter(u => u.denied)
+    bot.sendMessage(msg.chat.id,
+      `📊 *Profit Pulse AI — Stats*\n\n` +
+      `👥 Total Users: *${all.length}*\n` +
+      `✅ Verified (Active): *${verified.length}*\n` +
+      `⏳ Pending Approval: *${pending.length}*\n` +
+      `❌ Denied: *${denied.length}*\n\n` +
+      `Use /userlist to see all verified users\n` +
+      `Use /remove <PO_UID> to revoke access`,
+      { parse_mode: 'Markdown' }
+    )
+  })
+
+  // /users — same as /stats (alias)
   bot.onText(/\/users/, msg => {
     if (!ADMINS.includes(String(msg.from.id))) return
     const all = getAllUsers()
     bot.sendMessage(msg.chat.id,
-      `📊 *Users*\nTotal: ${all.length}\nVerified: ${all.filter(u=>u.verified).length}\nPending: ${all.filter(u=>u.pending&&!u.verified).length}\nDenied: ${all.filter(u=>u.denied).length}`,
+      `📊 *Users*\nTotal: ${all.length}\nVerified: ${all.filter(u=>u.verified).length}\nPending: ${all.filter(u=>u.pending&&!u.verified).length}\nDenied: ${all.filter(u=>u.denied).length}\n\nUse /userlist for full details`,
       { parse_mode: 'Markdown' }
     )
+  })
+
+  // /userlist — show all verified users with full details
+  bot.onText(/\/userlist/, msg => {
+    if (!ADMINS.includes(String(msg.from.id))) return
+    const verified = getAllUsers().filter(u => u.verified)
+    if (!verified.length) return bot.sendMessage(msg.chat.id, '📭 No verified users yet.')
+
+    // Send in chunks of 10 to avoid message length limits
+    const chunks = []
+    for (let i = 0; i < verified.length; i += 10) {
+      chunks.push(verified.slice(i, i + 10))
+    }
+
+    bot.sendMessage(msg.chat.id,
+      `✅ *Verified Users (${verified.length} total)*\n\n` +
+      `Showing page 1 of ${chunks.length}...\n` +
+      `Use /remove <PO\\_UID> to revoke access`,
+      { parse_mode: 'Markdown' }
+    )
+
+    chunks.forEach((chunk, page) => {
+      const lines = chunk.map((u, i) => {
+        const date    = u.verifiedAt ? u.verifiedAt.split('T')[0] : '?'
+        const balance = u.balance != null ? `$${Number(u.balance).toFixed(2)}` : 'N/A'
+        const by      = u.approvedBy === 'admin' ? '👤 Manual' : '🤖 Auto'
+        return `${(page*10)+i+1}. *PO UID:* \`${u.pocketOptionUid}\`\n   TG: \`${u.telegramId}\`\n   💰 ${balance} · ${by} · ${date}`
+      }).join('\n\n')
+      setTimeout(() => {
+        bot.sendMessage(msg.chat.id, lines, { parse_mode: 'Markdown' })
+      }, page * 500)
+    })
+  })
+
+  // /user <PO_UID> — show one user's full details
+  bot.onText(/\/user (.+)/, (msg, match) => {
+    if (!ADMINS.includes(String(msg.from.id))) return
+    const poUid = match[1].trim()
+    const user  = Object.values(dbRead()).find(u => String(u.pocketOptionUid) === poUid)
+    if (!user) return bot.sendMessage(msg.chat.id, `❌ No user found with PO UID \`${poUid}\``, { parse_mode: 'Markdown' })
+
+    const status  = user.verified ? '✅ Active' : user.pending ? '⏳ Pending' : user.denied ? '❌ Denied' : '❓ Unknown'
+    const balance = user.balance  != null ? `$${Number(user.balance).toFixed(2)}` : 'Not checked'
+    const date    = user.verifiedAt ? user.verifiedAt.split('T')[0] : 'N/A'
+
+    bot.sendMessage(msg.chat.id,
+      `👤 *User Details*\n\n` +
+      `🔢 PO UID: \`${user.pocketOptionUid}\`\n` +
+      `📱 TG ID: \`${user.telegramId}\`\n` +
+      `📊 Status: ${status}\n` +
+      `💰 Last Balance: ${balance}\n` +
+      `📅 Verified: ${date}\n` +
+      `🔍 By: ${user.approvedBy === 'admin' ? 'Manual Admin' : 'Auto API'}\n` +
+      `🔄 Last Check: ${user.lastBalanceCheck ? user.lastBalanceCheck.split('T')[0] : 'Never'}\n\n` +
+      `To remove: /remove ${user.pocketOptionUid}`,
+      { parse_mode: 'Markdown' }
+    )
+  })
+
+  // /remove <PO_UID> — revoke a user's access
+  bot.onText(/\/remove (.+)/, (msg, match) => {
+    if (!ADMINS.includes(String(msg.from.id))) return
+    const poUid = match[1].trim()
+    const db    = dbRead()
+    const entry = Object.values(db).find(u => String(u.pocketOptionUid) === poUid)
+    if (!entry) return bot.sendMessage(msg.chat.id, `❌ No user found with PO UID \`${poUid}\``, { parse_mode: 'Markdown' })
+
+    // Revoke access
+    setUser(entry.telegramId, {
+      verified:      false,
+      revokedAt:     new Date().toISOString(),
+      revokeReason:  'removed_by_admin',
+    })
+
+    bot.sendMessage(msg.chat.id,
+      `🚫 *Access Removed*\n\nPO UID: \`${poUid}\`\nTG: \`${entry.telegramId}\`\n\nUser has been notified.`,
+      { parse_mode: 'Markdown' }
+    )
+
+    // Notify the user their access was removed
+    if (entry.telegramId && !entry.telegramId.startsWith('dev-')) {
+      bot.sendMessage(entry.telegramId,
+        `🚫 *Your access has been removed*\n\nYour access to Profit Pulse AI signals has been revoked by the admin.\n\nIf you believe this is a mistake, please contact support:\n@ManavPOofficial`,
+        { parse_mode: 'Markdown' }
+      ).catch(() => {})
+    }
   })
 
   bot.on('polling_error', err => console.error('[bot]', err.message))
