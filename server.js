@@ -111,6 +111,12 @@ async function checkPocketOption(uid) {
       return { ok: false, apiError: true, reason: `Pocket Partners API error (${status})` }
     }
 
+    // Check if response is HTML (not JSON)
+    if (body.trim().startsWith('<')) {
+      console.error('[PO API] Got HTML response instead of JSON — wrong URL format?')
+      return { ok: false, apiError: true, reason: 'API returned HTML page (check URL format)' }
+    }
+
     const data = JSON.parse(body)
 
     const balance     = parseFloat(data.balance     ?? 0)
@@ -504,19 +510,27 @@ app.post('/api/admin/approve', (req, res) => {
   res.json({ success: true })
 })
 
-// GET /api/test-po?uid=123456 — test dynamic hash for a given UID
+// GET /api/test-po?uid=123456 — test dynamic hash, try multiple URL formats
 app.get('/api/test-po', async (req, res) => {
   const uid       = req.query.uid || '133254094'
   const hashInput = `${uid}:${PO_CAMPAIGN}:${PO_API_TOKEN}`
   const hash      = crypto.createHash('md5').update(hashInput).digest('hex')
-  const url       = `https://pocketpartners.com/api/user-info/${uid}/${PO_CAMPAIGN}/${hash}`
 
-  try {
-    const { status, body } = await httpsGet(url)
-    res.json({ uid, hashInput, hash, url, status, result: JSON.parse(body) })
-  } catch(e) {
-    res.json({ uid, hashInput, hash, url, error: e.message })
+  const urls = [
+    `https://pocketpartners.com/api/user-info/${uid}/${PO_CAMPAIGN}/${hash}`,
+    `https://pocketpartners.com/en/api/user-info/${uid}/${PO_CAMPAIGN}/${hash}`,
+  ]
+
+  const results = []
+  for (const url of urls) {
+    try {
+      const { status, body } = await httpsGet(url)
+      results.push({ url, status, rawBody: body.slice(0, 300) })
+    } catch(e) {
+      results.push({ url, status: 'ERROR', rawBody: e.message })
+    }
   }
+  res.json({ uid, hashInput, hash, results })
 })
 
 // ─── Free signal tracking ─────────────────────────────────────────────────────
