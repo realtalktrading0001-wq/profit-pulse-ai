@@ -23,6 +23,7 @@ const PO_HASH       = process.env.PO_API_HASH                       // 6b1c18ca6
 const MIN_BALANCE        = parseFloat(process.env.MIN_BALANCE        || '50')  // $50 to GET access (first time)
 const MAINTAIN_BALANCE   = parseFloat(process.env.MAINTAIN_BALANCE   || '20')  // $20 to KEEP access (ongoing)
 const AFFILIATE_ID       = process.env.AFFILIATE_ID || '1739694'               // your al= ID in the affiliate link
+const PO_API_TOKEN       = process.env.PO_API_TOKEN || 'suTC6e89oYB4O9RV4ynS' // raw API token (hash computed per request)
 const BALANCE_TTL   = 60 * 60 * 1000                                // re-check balance every 1h
 
 // ─── File-based user database ─────────────────────────────────────────────────
@@ -85,13 +86,16 @@ function httpsGet(url) {
 }
 
 async function checkPocketOption(uid) {
-  if (!PO_HASH) {
-    console.warn('[PO API] PO_API_HASH not set in .env')
+  if (!PO_API_TOKEN) {
+    console.warn('[PO API] PO_API_TOKEN not set in .env')
     return { ok: false, apiError: true, reason: 'API not configured' }
   }
 
-  const url = `https://pocketpartners.com/en/api/user-info/${encodeURIComponent(uid)}/${PO_CAMPAIGN}/${PO_HASH}`
-  console.log(`[PO API] Calling: /api/user-info/${uid}/${PO_CAMPAIGN}/***`)
+  // Hash is computed PER REQUEST: md5(user_id:partner_id:api_token)
+  const hashInput = `${uid}:${PO_CAMPAIGN}:${PO_API_TOKEN}`
+  const hash      = crypto.createHash('md5').update(hashInput).digest('hex')
+  const url       = `https://pocketpartners.com/api/user-info/${uid}/${PO_CAMPAIGN}/${hash}`
+  console.log(`[PO API] uid=${uid} hash=${hash} url=${url}`)
 
   try {
     const { status, body } = await httpsGet(url)
@@ -500,31 +504,19 @@ app.post('/api/admin/approve', (req, res) => {
   res.json({ success: true })
 })
 
-// GET /api/test-po?uid=123456 — test all hash combinations automatically
+// GET /api/test-po?uid=123456 — test dynamic hash for a given UID
 app.get('/api/test-po', async (req, res) => {
-  const uid    = req.query.uid || '133254094'
-  const token  = 'suTC6e89oYB4O9RV4ynS'
-  const md5tok = crypto.createHash('md5').update(token).digest('hex')
-  const sha256 = crypto.createHash('sha256').update(token).digest('hex').slice(0,32)
+  const uid       = req.query.uid || '133254094'
+  const hashInput = `${uid}:${PO_CAMPAIGN}:${PO_API_TOKEN}`
+  const hash      = crypto.createHash('md5').update(hashInput).digest('hex')
+  const url       = `https://pocketpartners.com/api/user-info/${uid}/${PO_CAMPAIGN}/${hash}`
 
-  const attempts = [
-    { label: 'token_as_hash',    hash: token },
-    { label: 'md5_of_token',     hash: md5tok },
-    { label: 'sha256_of_token',  hash: sha256 },
-    { label: 'current_PO_HASH',  hash: PO_HASH },
-  ]
-
-  const results = []
-  for (const a of attempts) {
-    const url = `https://pocketpartners.com/en/api/user-info/${uid}/${PO_CAMPAIGN}/${a.hash}`
-    try {
-      const { status, body } = await httpsGet(url)
-      results.push({ label: a.label, hash: a.hash, status, preview: body.slice(0,150) })
-    } catch(e) {
-      results.push({ label: a.label, hash: a.hash, status: 'ERROR', preview: e.message })
-    }
+  try {
+    const { status, body } = await httpsGet(url)
+    res.json({ uid, hashInput, hash, url, status, result: JSON.parse(body) })
+  } catch(e) {
+    res.json({ uid, hashInput, hash, url, error: e.message })
   }
-  res.json({ uid, md5ofToken: md5tok, results })
 })
 
 // ─── Free signal tracking ─────────────────────────────────────────────────────
