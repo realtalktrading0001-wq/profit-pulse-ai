@@ -277,14 +277,14 @@ if (TOKEN) {
     const pending  = all.filter(u => u.pending && !u.verified)
     const denied   = all.filter(u => u.denied)
     bot.sendMessage(msg.chat.id,
-      `📊 *Profit Pulse AI — Stats*\n\n` +
-      `👥 Total Users: *${all.length}*\n` +
-      `✅ Verified (Active): *${verified.length}*\n` +
-      `⏳ Pending Approval: *${pending.length}*\n` +
-      `❌ Denied: *${denied.length}*\n\n` +
-      `Use /userlist to see all verified users\n` +
-      `Use /remove <PO_UID> to revoke access`,
-      { parse_mode: 'Markdown' }
+      `📊 Profit Pulse AI — Stats\n\n` +
+      `👥 Total Users: ${all.length}\n` +
+      `✅ Verified (Active): ${verified.length}\n` +
+      `⏳ Pending Approval: ${pending.length}\n` +
+      `❌ Denied: ${denied.length}\n\n` +
+      `Use /userlist — all verified users\n` +
+      `Use /remove UID — revoke access\n` +
+      `Use /user UID — check one user`
     )
   })
 
