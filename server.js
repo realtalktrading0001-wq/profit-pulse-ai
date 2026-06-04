@@ -669,11 +669,13 @@ app.post('/api/free/check', (req, res) => {
 
 // GET /health
 app.get('/health', (_req, res) => res.json({
-  status:     'ok',
-  uptime:     Math.round(process.uptime()) + 's',
-  poApiHash:  PO_HASH   ? '✅ set' : '❌ missing',
-  botToken:   TOKEN     ? '✅ set' : '❌ missing',
-  minBalance: `$${MIN_BALANCE}`,
+  status:      'ok',
+  version:     'v2.0-admin-commands',
+  uptime:      Math.round(process.uptime()) + 's',
+  poApiToken:  PO_API_TOKEN ? '✅ set' : '❌ missing',
+  botToken:    TOKEN        ? '✅ set' : '❌ missing',
+  minBalance:  `$${MIN_BALANCE}`,
+  adminCount:  ADMINS.length,
 }))
 
 // ─── Start ────────────────────────────────────────────────────────────────────
